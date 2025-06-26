@@ -1,0 +1,202 @@
+
+warning off           
+close all              
+clear                 
+clc                     
+
+
+path.data = '.\DATA\';
+path.output = '.\OUTPUT\';
+addpath (genpath('.\CODE\'))
+
+%%  Import data
+load(strcat(path.data,'subject_feature3.mat'))
+
+%%  Devide data
+%  training set 80%  test set 20%
+num_size = 0.8; 
+%  stratified sampling
+[data_test,data_train] = data_divide(subject_feature,num_size);
+
+%%  Feature correlation ranking
+for fs_type = 5 %fs_type: 1-pearson 2-relieff 3-fscchi2 4-fsrftest 5-fsmrmr 6-spearman
+[RANKED,WEIGHT] = feature_selection_home(subject_feature(:,10:409),subject_feature(:,2),fs_type);
+
+for n = 29 % n = 10 n = 15 n = 20 n = 25 n = 30
+feature_column = RANKED(1:n);
+correlation_index = WEIGHT(1:n);
+
+%%  Regression
+P_train = data_train(:,[7 feature_column+9]);P_test = data_test(:,[7 feature_column+9]);T_train = data_train(:,2);T_test = data_test(:,2);M = size(P_train,1);N = size(P_test,1);
+[Result] = Multi_model(P_train',P_test' ,T_train',T_test',M,N);
+%Average the output by id
+[Result,T_train,T_test] = OUTPUT_averaging(data_train,data_test,T_train,T_test,Result);
+
+close all
+
+switch fs_type
+    case 1
+        switch n
+            case 5
+                output_name = 'pearson_5features.csv';
+            case 10
+                output_name = 'pearson_10features.csv';
+            case 15
+                output_name = 'pearson_15features.csv';
+            case 20
+                output_name = 'pearson_20features.csv';
+            case 25
+                output_name = 'pearson_25features.csv';
+            case 30
+                output_name = 'pearson_30features.csv';
+        end
+    case 2
+        switch n
+            case 5
+                output_name = 'relieff_5features.csv';
+            case 10
+                output_name = 'relieff_10features.csv';
+            case 15
+                output_name = 'relieff_15features.csv';
+            case 20
+                output_name = 'relieff_20features.csv';
+            case 25
+                output_name = 'relieff_25features.csv';
+            case 30
+                output_name = 'relieff_30features.csv';
+        end
+    case 3
+        switch n
+            case 5
+                output_name = 'ChiSquare_5features.csv';
+            case 10
+                output_name = 'ChiSquare_10features.csv';
+            case 15
+                output_name = 'ChiSquare_15features.csv';
+            case 20
+                output_name = 'ChiSquare_20features.csv';
+            case 25
+                output_name = 'ChiSquare_25features.csv';
+            case 30
+                output_name = 'ChiSquare_30features.csv';
+        end
+    case 4
+        switch n
+            case 5
+                output_name = 'fsrftest_5features.csv';
+            case 10
+                output_name = 'fsrftest_10features.csv';
+            case 15
+                output_name = 'fsrftest_15features.csv';
+            case 20
+                output_name = 'fsrftest_20features.csv';
+            case 25
+                output_name = 'fsrftest_25features.csv';
+            case 30
+                output_name = 'fsrftest_30features.csv';
+        end
+    case 5
+        switch n
+            case 5
+                output_name = 'fsrmrmr_5features.csv';
+            case 10
+                output_name = 'fsrmrmr_10features.csv';
+            case 15
+                output_name = 'fsrmrmr_15features.csv';
+            case 20
+                output_name = 'fsrmrmr_20features.csv';
+            case 25
+                output_name = 'fsrmrmr_25features.csv';
+            case 30
+                output_name = 'fsrmrmr_30features.csv';
+        end
+end
+
+%%Save the results to CSV file.
+writematrix(datevec(datenum(clock)),[path.output output_name],'WriteMode','append');
+writematrix([length(P_train) length(P_test) num_size 1-num_size],[path.output output_name],'WriteMode','append');
+
+%Number of feature selections output
+writematrix('fQuantity',[path.output output_name],'WriteMode','append');
+writematrix(n,[path.output output_name],'WriteMode','append');
+
+%Feature ranking results output
+writematrix('Sort Result',[path.output output_name],'WriteMode','append');
+writematrix(feature_column,[path.output output_name],'WriteMode','append');
+
+%error1 error2 Train_R2 Test_R2 Train_MAE Test_MAE Train_MBE Test_MBE of XGBoost
+writematrix('xgboost Model',[path.output output_name],'WriteMode','append');
+
+writematrix('T_sim1',[path.output output_name],'WriteMode','append');
+writematrix(Result.xgboost.T_sim1,[path.output output_name],'WriteMode','append');
+
+writematrix('T_train',[path.output output_name],'WriteMode','append');
+writematrix(T_train,[path.output output_name],'WriteMode','append');
+
+writematrix('T_sim2',[path.output output_name],'WriteMode','append');
+writematrix(Result.xgboost.T_sim2,[path.output output_name],'WriteMode','append');
+
+writematrix('T_test',[path.output output_name],'WriteMode','append');
+writematrix(T_test,[path.output output_name],'WriteMode','append'); 
+
+%writematrix('error1 error2 Train_R2 Test_R2 Train_MAE Test_MAE Train_MBE Test_MBE',[path.output output_name],'WriteMode','append');
+writematrix(Result.xgboost.index,[path.output output_name],'WriteMode','append');
+
+%error1 error2 Train_R2 Test_R2 Train_MAE Test_MAE Train_MBE Test_MBE of SVM
+writematrix('SVM Model',[path.output output_name],'WriteMode','append'); 
+
+writematrix('T_sim1',[path.output output_name],'WriteMode','append');
+writematrix(Result.SVM.T_sim1,[path.output output_name],'WriteMode','append');
+
+writematrix('T_train',[path.output output_name],'WriteMode','append');
+writematrix(T_train,[path.output output_name],'WriteMode','append');
+
+writematrix('T_sim2',[path.output output_name],'WriteMode','append');
+writematrix(Result.SVM.T_sim2,[path.output output_name],'WriteMode','append');
+
+writematrix('T_test',[path.output output_name],'WriteMode','append');
+writematrix(T_test,[path.output output_name],'WriteMode','append');
+
+%writematrix('error1 error2 Train_R2 Test_R2 Train_MAE Test_MAE Train_MBE Test_MBE',[path.output output_name],'WriteMode','append');
+writematrix(Result.SVM.index,[path.output output_name],'WriteMode','append');
+
+
+%error1 error2 Train_R2 Test_R2 Train_MAE Test_MAE Train_MBE Test_MBE of Random-forest
+writematrix('Random-forest Model',[path.output output_name],'WriteMode','append');
+
+writematrix('T_sim1',[path.output output_name],'WriteMode','append');
+writematrix(Result.Random_forest.T_sim1,[path.output output_name],'WriteMode','append');
+
+writematrix('T_train',[path.output output_name],'WriteMode','append');
+writematrix(T_train,[path.output output_name],'WriteMode','append');
+
+writematrix('T_sim2',[path.output output_name],'WriteMode','append');
+writematrix(Result.Random_forest.T_sim2,[path.output output_name],'WriteMode','append');
+
+writematrix('T_test',[path.output output_name],'WriteMode','append');
+writematrix(T_test,[path.output output_name],'WriteMode','append');
+
+%writematrix('error1 error2 Train_R2 Test_R2 Train_MAE Test_MAE Train_MBE Test_MBE',[path.output output_name],'WriteMode','append');
+writematrix(Result.Random_forest.index,[path.output output_name],'WriteMode','append');
+
+%error1 error2 Train_R2 Test_R2 Train_MAE Test_MAE Train_MBE Test_MBE Random-forest
+writematrix('Regression_logic Model',[path.output output_name],'WriteMode','append');
+
+writematrix('T_sim1',[path.output output_name],'WriteMode','append');
+writematrix(Result.Regression_logic.T_sim1,[path.output output_name],'WriteMode','append');
+
+writematrix('T_train',[path.output output_name],'WriteMode','append');
+writematrix(T_train,[path.output output_name],'WriteMode','append');
+
+writematrix('T_sim2',[path.output output_name],'WriteMode','append');
+writematrix(Result.Regression_logic.T_sim2,[path.output output_name],'WriteMode','append');
+
+writematrix('T_test',[path.output output_name],'WriteMode','append');
+writematrix(T_test,[path.output output_name],'WriteMode','append');
+
+%writematrix('error1 error2 Train_R2 Test_R2 Train_MAE Test_MAE Train_MBE Test_MBE',[path.output output_name],'WriteMode','append');
+writematrix(Result.Regression_logic.index,[path.output output_name],'WriteMode','append');
+close all
+
+end
+end

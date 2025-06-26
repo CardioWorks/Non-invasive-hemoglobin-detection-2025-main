@@ -1,0 +1,27 @@
+function  data = Optimization_algorithms(val1,val2,data_test,n,type)
+if isequal(size(val1), size(val2))
+    error = abs(val1-val2);
+else
+    error = abs(val1'-val2);
+end
+data_test = [data_test error];
+    
+id_list = data_test(:,1);
+id_list = unique(id_list);
+for i = 1:length(id_list)
+    single_sample_data = data_test(ismember(data_test(:, 1), id_list(i)), :);
+
+    [~, sortedIndices] = sortrows(single_sample_data, size(single_sample_data,2));
+    minIndices = sortedIndices(1:ceil(size(single_sample_data,1)*n));   
+    newMatrix = single_sample_data(minIndices, :);
+    % if type == 0
+    %    newMatrix = mean(newMatrix,1);
+    % end
+    if i == 1
+        data = newMatrix;
+    else
+        data = [data;newMatrix];
+    end
+end
+data(:,end) = [];
+end
